@@ -16,7 +16,7 @@
 ##
 
 from twisted.python.failure import Failure
-from twisted.internet.defer import Deferred, fail
+from twisted.internet.defer import Deferred, fail, maybeDeferred
 from twisted.internet.protocol import ReconnectingClientFactory
 
 
@@ -143,15 +143,15 @@ class Pool(object):
 
     def _shutdownCallback(self):
         self.shutdown_requested = True
-        
+
         for client in self._busyClients:
             client.transport.loseConnection()
         for client in self._freeClients:
             client.transport.loseConnection()
-        
+
         if self._isIdle():
             return None
-        
+
         self.shutdown_deferred = Deferred()
         return self.shutdown_deferred
 
@@ -203,10 +203,10 @@ class Pool(object):
             return result
 
         self.clientBusy(client)
-        
+
         method = getattr(client, method, None)
         if method is not None:
-            d = method(*args, **kwargs)
+            d = maybeDeferred(method, *args, **kwargs)
         else:
             d = fail(Failure(NoSuchCommand()))
 
