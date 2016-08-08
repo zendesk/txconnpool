@@ -25,7 +25,6 @@ class NoSuchCommand(Exception):
     """
 
 
-
 class PooledClientFactory(ReconnectingClientFactory):
     """
     A client factory for a protocol that reconnects and notifies a pool of it's
@@ -40,10 +39,8 @@ class PooledClientFactory(ReconnectingClientFactory):
     connectionPool = None
     _protocolInstance = None
 
-
     def __init__(self):
         self.deferred = Deferred()
-
 
     def clientConnectionLost(self, connector, reason):
         """
@@ -62,13 +59,16 @@ class PooledClientFactory(ReconnectingClientFactory):
             connector,
             reason)
 
-
     def clientConnectionFailed(self, connector, reason):
         """
         Notify the connectionPool that we're unable to connect
         """
+
         if self._protocolInstance is not None:
             self.connectionPool.clientBusy(self._protocolInstance)
+
+        self.connectionPool.clientFailed(
+            self._protocolInstance, connector.host, connector.port)
 
         ReconnectingClientFactory.clientConnectionFailed(
             self,
@@ -86,7 +86,6 @@ class PooledClientFactory(ReconnectingClientFactory):
         self._protocolInstance = self.protocol()
         self._protocolInstance.factory = self
         return self._protocolInstance
-
 
 
 class Pool(object):
@@ -110,9 +109,14 @@ class Pool(object):
     @ivar forceShutdown: A C{bool} indicating whether or not to ignore pending
         connections while shutting down.
     """
-    clientFactory = None # Should be set to the subclassed PooledClientFactory
 
-    def __init__(self, serverAddress, maxClients=5,
+    clientFactory = None  # Should be set to the subclassed PooledClientFactory
+
+    @property
+    def _serverAddress(self):
+        return self._serverAddresses[self._active_server_index]
+
+    def __init__(self, serverAddresses, maxClients=5,
             reactor=None, forceShutdown=False):
         """
         @param serverAddress: An L{IPv4Address} indicating the server to
@@ -121,7 +125,12 @@ class Pool(object):
         @param reactor: An L{IReactorTCP{ provider used to initiate new
             connections.
         """
-        self._serverAddress = serverAddress
+        self._active_server_index = 0
+
+        if not isinstance(serverAddresses, list):
+            serverAddresses = [serverAddresses]
+        self._serverAddresses = serverAddresses
+
         self._maxClients = maxClients
 
         if reactor is None:
@@ -191,7 +200,6 @@ class Pool(object):
         d.addCallback(_connected)
         return d
 
-
     def _performRequestOnClient(self, client, method, *args, **kwargs):
         """
         Perform the given request on the given client.
@@ -224,7 +232,6 @@ class Pool(object):
 
         return d
 
-
     def performRequest(self, method, *args, **kwargs):
         """
         Select an available client and perform the given request on it.
@@ -256,6 +263,18 @@ class Pool(object):
 
         return d
 
+    def rotate_server(self):
+        self._active_server_index = (
+            self._active_server_index + 1) % len(self._serverAddresses)
+
+    def clientFailed(self, client, host, port):
+        if (
+            self._serverAddress.host == host and
+            self._serverAddress.port == port
+        ):
+            self.rotate_server()
+
+        self.clientGone(client)
 
     def clientGone(self, client):
         """
@@ -263,12 +282,12 @@ class Pool(object):
 
         @param client: An instance of a L{Protocol}.
         """
+
         if client in self._busyClients:
             self._busyClients.remove(client)
 
         elif client in self._freeClients:
             self._freeClients.remove(client)
-
 
     def clientBusy(self, client):
         """
@@ -276,11 +295,11 @@ class Pool(object):
 
         @param client: An instance of C{self.clientFactory}
         """
+
         if client in self._freeClients:
             self._freeClients.remove(client)
 
         self._busyClients.add(client)
-
 
     def clientFree(self, client):
         """
@@ -302,7 +321,6 @@ class Pool(object):
             _ign_d = self.performRequest(method, *args, **kwargs)
 
             _ign_d.chainDeferred(d)
-
 
     def suggestMaxClients(self, maxClients):
         """
