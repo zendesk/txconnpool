@@ -14,10 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
-
-from twisted.python.failure import Failure
 from twisted.internet.defer import Deferred, fail, maybeDeferred
 from twisted.internet.protocol import ReconnectingClientFactory
+from twisted.python.failure import Failure
 
 
 class NoSuchCommand(Exception):
@@ -107,6 +106,7 @@ class Pool(object):
     @ivar _freeClients: A C{set} that contains all currently free clients.
     @ivar _pendingConnects: A C{int} indicating how many connections are in
         progress.
+    @ivar _factories: A C{list} of active L{PooledClientFactory}s.
     """
     clientFactory = None # Should be set to the subclassed PooledClientFactory
 
@@ -133,12 +133,12 @@ class Pool(object):
         self._freeClients = set([])
         self._pendingConnects = 0
         self._commands = []
+        self._factories = []
 
     def _isIdle(self):
         return (
             len(self._busyClients) == 0 and
-            len(self._commands) == 0 and
-            self._pendingConnects == 0
+            len(self._commands) == 0
         )
 
     def _shutdownCallback(self):
@@ -148,6 +148,10 @@ class Pool(object):
             client.transport.loseConnection()
         for client in self._freeClients:
             client.transport.loseConnection()
+        for factory in self._factories:
+            factory.stopTrying()
+
+        self._factories = []
 
         if self._isIdle():
             return None
@@ -172,6 +176,8 @@ class Pool(object):
         factory.noisy = False
 
         factory.connectionPool = self
+
+        self._factories.append(factory)
 
         self._reactor.connectTCP(self._serverAddress.host,
                                  self._serverAddress.port,
