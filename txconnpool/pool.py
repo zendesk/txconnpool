@@ -107,10 +107,13 @@ class Pool(object):
     @ivar _pendingConnects: A C{int} indicating how many connections are in
         progress.
     @ivar _factories: A C{list} of active L{PooledClientFactory}s.
+    @ivar forceShutdown: A C{bool} indicating whether or not to ignore pending
+        connections while shutting down.
     """
     clientFactory = None # Should be set to the subclassed PooledClientFactory
 
-    def __init__(self, serverAddress, maxClients=5, reactor=None):
+    def __init__(self, serverAddress, maxClients=5,
+            reactor=None, forceShutdown=False):
         """
         @param serverAddress: An L{IPv4Address} indicating the server to
             connect to.
@@ -134,6 +137,7 @@ class Pool(object):
         self._pendingConnects = 0
         self._commands = []
         self._factories = []
+        self._forceShutdown = forceShutdown
 
     def _isIdle(self):
         return (
@@ -153,7 +157,7 @@ class Pool(object):
 
         self._factories = []
 
-        if self._isIdle():
+        if self._isIdle() or self._forceShutdown:
             return None
 
         self.shutdown_deferred = Deferred()
