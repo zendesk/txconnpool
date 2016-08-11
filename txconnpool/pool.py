@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
+import time
+
+from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred, fail, maybeDeferred
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python.failure import Failure
@@ -24,6 +27,9 @@ class NoSuchCommand(Exception):
     Exception raised when a non-existent command is called.
     """
 
+
+def repr_for_ipv4address(address):
+    return "{}{}:{}".format(address.type, address.host, address.port)
 
 class PooledClientFactory(ReconnectingClientFactory):
     """
@@ -112,10 +118,6 @@ class Pool(object):
 
     clientFactory = None  # Should be set to the subclassed PooledClientFactory
 
-    @property
-    def _serverAddress(self):
-        return self._serverAddresses[self._active_server_index]
-
     def __init__(self, serverAddresses, maxClients=5,
             reactor=None, forceShutdown=False):
         """
@@ -130,6 +132,8 @@ class Pool(object):
         if not isinstance(serverAddresses, list):
             serverAddresses = [serverAddresses]
         self._serverAddresses = serverAddresses
+        self._serverOORRecords = {}
+        self._next_server_index = 0
 
         self._maxClients = maxClients
 
@@ -172,6 +176,31 @@ class Pool(object):
         self.shutdown_deferred = Deferred()
         return self.shutdown_deferred
 
+    @property
+    def _nextServerAddress(self):
+        total_server_count = len(self._serverAddresses)
+        candidate = self._next_server_index
+        for i in range(total_server_count):
+            effective_index = (candidate + i) % total_server_count
+            server_key = repr_for_ipv4address(
+                self._serverAddresses[effective_index])
+
+            self._next_server_index = effective_index
+
+            if server_key in self._serverOORRecords:
+                if time.time() > self._serverOORRecords[server_key]:
+                    del self._serverOORRecords[server_key]
+                    return self._serverAddresses[effective_index]
+            else:
+                return self._serverAddresses[effective_index]
+
+        return self._serverAddresses[effective_index]
+
+    def remove_server_from_rotation(self, server_address):
+        server_key = repr_for_ipv4address(server_address)
+        # TODO: exponential/controlled backoff
+        self._serverOORRecords[server_key] = time.time() + 10
+
     def _newClientConnection(self):
         """
         Create a new client connection.
@@ -192,8 +221,8 @@ class Pool(object):
 
         self._factories.append(factory)
 
-        self._reactor.connectTCP(self._serverAddress.host,
-                                 self._serverAddress.port,
+        self._reactor.connectTCP(self._nextServerAddress.host,
+                                 self._nextServerAddress.port,
                                  factory)
         d = factory.deferred
 
@@ -263,17 +292,8 @@ class Pool(object):
 
         return d
 
-    def rotate_server(self):
-        self._active_server_index = (
-            self._active_server_index + 1) % len(self._serverAddresses)
-
     def clientFailed(self, client, host, port):
-        if (
-            self._serverAddress.host == host and
-            self._serverAddress.port == port
-        ):
-            self.rotate_server()
-
+        self.remove_server_from_rotation(IPv4Address('TCP', host, port))
         self.clientGone(client)
 
     def clientGone(self, client):
