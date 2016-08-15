@@ -102,8 +102,14 @@ class Pool(object):
         for each protocol.
 
     @ivar _maxClients: A C{int} indicating the maximum number of clients.
-    @ivar _serverAddress: An L{IAddress} provider indicating the server to
-        connect to.  (Only L{IPv4Address} currently supported.)
+    @ivar _serverAddresses: A list of L{IAddress} provider indicating the
+        server to connect to. (Only L{IPv4Address(es)} currently
+        supported.)
+    @ivar _serverOORRecords: A C{dict} storing downtime of the servers in
+        the pool.
+    @ivar _next_server_index: A C{int} storing the index of the next server
+        to try.
+
     @ivar _reactor: The L{IReactorTCP} provider used to initiate new
         connections.
 
