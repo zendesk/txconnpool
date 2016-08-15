@@ -221,8 +221,10 @@ class Pool(object):
 
         self._factories.append(factory)
 
-        self._reactor.connectTCP(self._nextServerAddress.host,
-                                 self._nextServerAddress.port,
+        next_server_address = self._nextServerAddress
+
+        self._reactor.connectTCP(next_server_address.host,
+                                 next_server_address.port,
                                  factory)
         d = factory.deferred
 
