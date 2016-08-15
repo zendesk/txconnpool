@@ -14,6 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
+import time
+
+from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred, fail, maybeDeferred
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python.failure import Failure
@@ -25,6 +28,8 @@ class NoSuchCommand(Exception):
     """
 
 
+def repr_for_ipv4address(address):
+    return "{}{}:{}".format(address.type, address.host, address.port)
 
 class PooledClientFactory(ReconnectingClientFactory):
     """
@@ -40,10 +45,8 @@ class PooledClientFactory(ReconnectingClientFactory):
     connectionPool = None
     _protocolInstance = None
 
-
     def __init__(self):
         self.deferred = Deferred()
-
 
     def clientConnectionLost(self, connector, reason):
         """
@@ -62,13 +65,16 @@ class PooledClientFactory(ReconnectingClientFactory):
             connector,
             reason)
 
-
     def clientConnectionFailed(self, connector, reason):
         """
         Notify the connectionPool that we're unable to connect
         """
+
         if self._protocolInstance is not None:
             self.connectionPool.clientBusy(self._protocolInstance)
+
+        self.connectionPool.clientFailed(
+            self._protocolInstance, connector.host, connector.port)
 
         ReconnectingClientFactory.clientConnectionFailed(
             self,
@@ -86,7 +92,6 @@ class PooledClientFactory(ReconnectingClientFactory):
         self._protocolInstance = self.protocol()
         self._protocolInstance.factory = self
         return self._protocolInstance
-
 
 
 class Pool(object):
@@ -110,9 +115,10 @@ class Pool(object):
     @ivar forceShutdown: A C{bool} indicating whether or not to ignore pending
         connections while shutting down.
     """
-    clientFactory = None # Should be set to the subclassed PooledClientFactory
 
-    def __init__(self, serverAddress, maxClients=5,
+    clientFactory = None  # Should be set to the subclassed PooledClientFactory
+
+    def __init__(self, serverAddresses, maxClients=5,
             reactor=None, forceShutdown=False):
         """
         @param serverAddress: An L{IPv4Address} indicating the server to
@@ -121,7 +127,14 @@ class Pool(object):
         @param reactor: An L{IReactorTCP{ provider used to initiate new
             connections.
         """
-        self._serverAddress = serverAddress
+        self._active_server_index = 0
+
+        if not isinstance(serverAddresses, list):
+            serverAddresses = [self.serverAddresses]
+        self._serverAddresses = serverAddresses
+        self._serverOORRecords = {}
+        self._next_server_index = 0
+
         self._maxClients = maxClients
 
         if reactor is None:
@@ -163,6 +176,31 @@ class Pool(object):
         self.shutdown_deferred = Deferred()
         return self.shutdown_deferred
 
+    @property
+    def _nextServerAddress(self):
+        total_server_count = len(self._serverAddresses)
+        candidate = self._next_server_index
+        for i in range(total_server_count):
+            effective_index = (candidate + i) % total_server_count
+            server_key = repr_for_ipv4address(
+                self._serverAddresses[effective_index])
+
+            self._next_server_index = effective_index
+
+            if server_key in self._serverOORRecords:
+                if time.time() > self._serverOORRecords[server_key]:
+                    del self._serverOORRecords[server_key]
+                    return self._serverAddresses[effective_index]
+            else:
+                return self._serverAddresses[effective_index]
+
+        return self._serverAddresses[effective_index]
+
+    def remove_server_from_rotation(self, server_address):
+        server_key = repr_for_ipv4address(server_address)
+        # TODO: exponential/controlled backoff
+        self._serverOORRecords[server_key] = time.time() + 10
+
     def _newClientConnection(self):
         """
         Create a new client connection.
@@ -183,14 +221,13 @@ class Pool(object):
 
         self._factories.append(factory)
 
-        self._reactor.connectTCP(self._serverAddress.host,
-                                 self._serverAddress.port,
+        self._reactor.connectTCP(self._nextServerAddress.host,
+                                 self._nextServerAddress.port,
                                  factory)
         d = factory.deferred
 
         d.addCallback(_connected)
         return d
-
 
     def _performRequestOnClient(self, client, method, *args, **kwargs):
         """
@@ -224,7 +261,6 @@ class Pool(object):
 
         return d
 
-
     def performRequest(self, method, *args, **kwargs):
         """
         Select an available client and perform the given request on it.
@@ -256,6 +292,9 @@ class Pool(object):
 
         return d
 
+    def clientFailed(self, client, host, port):
+        self.remove_server_from_rotation(IPv4Address('TCP', host, port))
+        self.clientGone(client)
 
     def clientGone(self, client):
         """
@@ -263,12 +302,12 @@ class Pool(object):
 
         @param client: An instance of a L{Protocol}.
         """
+
         if client in self._busyClients:
             self._busyClients.remove(client)
 
         elif client in self._freeClients:
             self._freeClients.remove(client)
-
 
     def clientBusy(self, client):
         """
@@ -276,11 +315,11 @@ class Pool(object):
 
         @param client: An instance of C{self.clientFactory}
         """
+
         if client in self._freeClients:
             self._freeClients.remove(client)
 
         self._busyClients.add(client)
-
 
     def clientFree(self, client):
         """
@@ -302,7 +341,6 @@ class Pool(object):
             _ign_d = self.performRequest(method, *args, **kwargs)
 
             _ign_d.chainDeferred(d)
-
 
     def suggestMaxClients(self, maxClients):
         """
