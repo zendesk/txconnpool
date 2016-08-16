@@ -1,4 +1,7 @@
+from pip.download import PipSession
+from pip.req import parse_requirements
 from setuptools import setup, find_packages
+
 
 version = '0.1.1'
 
@@ -12,17 +15,17 @@ A generalized connection pooling library for Twisted.
 Example Description
 -------------------
 
-Assume that we've got a web application, which performs some expensive 
+Assume that we've got a web application, which performs some expensive
 computations, and then caches them in a memcached_ server.  The simple way to
 achieve this in Twisted is to create a ClientCreator_ for the MemCacheProtocol_
 and whenever we need to communicate with the server, we can simply use that.
 
-This works for low volumes of queries, but let's say that now we start hitting 
+This works for low volumes of queries, but let's say that now we start hitting
 memcached a lot--several times per web request, of which we are receiving many
 per second.  Very quickly, the connection overhead can become a problem.
 
-Instead of creating a new connection for every query, it would be much better 
-to maintain a pool of open connections, and simply reuse those open 
+Instead of creating a new connection for every query, it would be much better
+to maintain a pool of open connections, and simply reuse those open
 connections; queuing up any queries if all of the connections are in use.  With
 txconnpool, setting this up can be quite easy.
 
@@ -44,7 +47,7 @@ MemCacheProtocol_ into a PooledMemcachedProtocol, and then create a pool::
         to accept requests.
         """
         factory = None
-    
+
         def connectionMade(self):
             """
             Notify our factory that we're ready to accept connections.
@@ -62,7 +65,7 @@ MemCacheProtocol_ into a PooledMemcachedProtocol, and then create a pool::
 
     class MemCachePool(Pool):
         clientFactory = MemCacheClientFactory
-    
+
         def get(self, *args, **kwargs):
             return self.performRequest('get', *args, **kwargs)
 
@@ -80,19 +83,19 @@ Now, with this having been created, we can go ahead and use it::
 
 
     from twisted.internet.address import IPv4Address
-    
+
     addr = IPv4Address('TCP', '127.0.0.1', 11211)
     mc_pool = MemCachePool(addr, maxClients=20)
-    
+
     d = mc_pool.get('cached-data')
-    
+
     def gotCachedData(data):
         flags, value = data
         if value:
             print 'Yay, we got a cache hit'
         else:
             print 'Boo, it was a cache miss'
-    
+
     d.addCallback(gotCachedData)
 
 
@@ -100,6 +103,15 @@ Now, with this having been created, we can go ahead and use it::
 .. _ClientCreator: http://twistedmatrix.com/documents/current/api/twisted.internet.protocol.ClientCreator.html
 .. _MemCacheProtocol: http://twistedmatrix.com/documents/current/api/twisted.protocols.memcache.MemCacheProtocol.html
 '''
+
+
+def get_requirements(filename, session):
+    return [str(r.req) for r in parse_requirements(filename, session=session)
+            if r.match_markers()]
+
+session = PipSession()
+install_requires = get_requirements('requirements/main.txt', session)
+test_requires = get_requirements('requirements/test.txt', session)
 
 setup(
     name='txconnpool',
@@ -120,4 +132,6 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
+    install_requires=install_requires,
+    extras_require={'test': test_requires},
 )

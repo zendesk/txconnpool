@@ -1,0 +1,5 @@
+-r main.txt
+nose==1.3.0
+hiro>=0.1.5
+nose-cov
+coverage
