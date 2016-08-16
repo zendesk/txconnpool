@@ -16,7 +16,6 @@
 ##
 import time
 
-from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred, fail, maybeDeferred
 from twisted.internet.protocol import ReconnectingClientFactory
 from twisted.python.failure import Failure
@@ -74,7 +73,7 @@ class PooledClientFactory(ReconnectingClientFactory):
             self.connectionPool.clientBusy(self._protocolInstance)
 
         self.connectionPool.clientFailed(
-            self._protocolInstance, connector.host, connector.port)
+            self._protocolInstance, connector)
 
         ReconnectingClientFactory.clientConnectionFailed(
             self,
@@ -300,9 +299,21 @@ class Pool(object):
 
         return d
 
-    def clientFailed(self, client, host, port):
-        self.remove_server_from_rotation(IPv4Address('TCP', host, port))
-        self.clientGone(client)
+    def clientFailed(self, client, client_connector):
+        """
+        Notify that the given client, using the client_connector failed to
+            connect to its server. The affected server should be removed from
+            rotation temporarily
+
+        @param client: An instance of a L{Protocol}.
+        @param client_connector: An instance of
+            L{twisted.internet.tcp.Connector}.
+        """
+
+        self.remove_server_from_rotation(client_connector.getDestination())
+
+        if client:
+            self.clientGone(client)
 
     def clientGone(self, client):
         """
