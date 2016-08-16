@@ -27,7 +27,7 @@ class NoSuchCommand(Exception):
     """
 
 
-def repr_for_ipv4address(address):
+def reprForIPv4Address(address):
     return "{}{}:{}".format(address.type, address.host, address.port)
 
 class PooledClientFactory(ReconnectingClientFactory):
@@ -138,7 +138,7 @@ class Pool(object):
             serverAddresses = [serverAddresses]
         self._serverAddresses = serverAddresses
         self._serverOORRecords = {}
-        self._next_server_index = 0
+        self._next_server_index = -1
 
         self._maxClients = maxClients
 
@@ -184,10 +184,10 @@ class Pool(object):
     @property
     def _nextServerAddress(self):
         total_server_count = len(self._serverAddresses)
-        candidate = self._next_server_index
+        candidate = (self._next_server_index + 1) % total_server_count
         for i in range(total_server_count):
             effective_index = (candidate + i) % total_server_count
-            server_key = repr_for_ipv4address(
+            server_key = reprForIPv4Address(
                 self._serverAddresses[effective_index])
 
             self._next_server_index = effective_index
@@ -199,10 +199,10 @@ class Pool(object):
             else:
                 return self._serverAddresses[effective_index]
 
-        return self._serverAddresses[effective_index]
+        return self._serverAddresses[candidate]
 
-    def remove_server_from_rotation(self, server_address):
-        server_key = repr_for_ipv4address(server_address)
+    def removeServerFromRotation(self, server_address):
+        server_key = reprForIPv4Address(server_address)
         # TODO: exponential/controlled backoff
         self._serverOORRecords[server_key] = time.time() + 10
 
@@ -310,7 +310,7 @@ class Pool(object):
             L{twisted.internet.tcp.Connector}.
         """
 
-        self.remove_server_from_rotation(client_connector.getDestination())
+        self.removeServerFromRotation(client_connector.getDestination())
 
         if client:
             self.clientGone(client)

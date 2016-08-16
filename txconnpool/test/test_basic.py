@@ -14,8 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 ##
+import time
 import unittest
 
+import hiro
 import mock
 from twisted.internet import protocol
 from twisted.internet.address import IPv4Address
@@ -23,7 +25,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IConnector, IReactorTCP
 from zope.interface import implements
 
-from txconnpool.pool import PooledClientFactory, Pool
+from txconnpool.pool import PooledClientFactory, Pool, reprForIPv4Address
 
 
 ADDRESS = IPv4Address('TCP', '127.0.0.1', 11211)
@@ -97,7 +99,7 @@ class StubConnectionPool(object):
         """
         self.calls.append(('gone', client))
 
-    def clientFailed(self, client, host, port):
+    def clientFailed(self, client, connector):
         """
         Record a C{'failed'} call for C{client}
         """
