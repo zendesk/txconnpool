@@ -104,8 +104,8 @@ class Pool(object):
     @ivar _serverAddresses: A list of L{IAddress} provider indicating the
         server to connect to. (Only L{IPv4Address(es)} currently
         supported.)
-    @ivar _serverOORRecords: A C{dict} storing downtime of the servers in
-        the pool.
+    @ivar _unavailableServers: A C{dict} storing downtime of the servers in
+        the pool. It's of the form{ server_address -> time its down until }
     @ivar _next_server_index: A C{int} storing the index of the next server
         to try.
 
@@ -137,7 +137,7 @@ class Pool(object):
         if not isinstance(serverAddresses, list):
             serverAddresses = [serverAddresses]
         self._serverAddresses = serverAddresses
-        self._serverOORRecords = {}
+        self._unavailableServers = {}
         self._next_server_index = -1
 
         self._maxClients = maxClients
@@ -192,9 +192,9 @@ class Pool(object):
 
             self._next_server_index = effective_index
 
-            if server_key in self._serverOORRecords:
-                if time.time() > self._serverOORRecords[server_key]:
-                    del self._serverOORRecords[server_key]
+            if server_key in self._unavailableServers:
+                if time.time() > self._unavailableServers[server_key]:
+                    del self._unavailableServers[server_key]
                     return self._serverAddresses[effective_index]
             else:
                 return self._serverAddresses[effective_index]
@@ -204,7 +204,7 @@ class Pool(object):
     def removeServerFromRotation(self, server_address):
         server_key = reprForIPv4Address(server_address)
         # TODO: exponential/controlled backoff
-        self._serverOORRecords[server_key] = time.time() + 10
+        self._unavailableServers[server_key] = time.time() + 10
 
     def _newClientConnection(self):
         """
