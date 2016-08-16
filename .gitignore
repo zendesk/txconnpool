@@ -1,4 +1,6 @@
 *.pyc
+*.swp
+
 build/
 src/
 pip-log.txt
@@ -6,3 +8,7 @@ pip-log.txt
 *~
 dist/
 txconnpool.egg-info/
+
+
+/htmlcov
+/.coverage
