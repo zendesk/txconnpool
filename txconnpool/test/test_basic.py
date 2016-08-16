@@ -430,3 +430,69 @@ class SimpleProtocolPoolTests(unittest.TestCase):
         args[2].deferred.callback(PooledSimpleProtocol())
 
         return d
+
+class SimpleProtocolPooledServersTests(unittest.TestCase):
+    """
+    Tests for L{SimpleProtocolPool}.
+
+    @ivar reactor: A L{StubReactor} instance.
+    @ivar pool: A L{SimpleProtocolPool} that connects to a pool of servers for testing.
+    """
+
+    def setUp(self):
+        """
+        Create a L{SimpleProtocolPool}.
+        """
+        unittest.TestCase.setUp(self)
+        self.addresses = [
+            IPv4Address('TCP', '127.0.0.1', 11211),
+            IPv4Address('TCP', '127.0.0.1', 11212),
+            IPv4Address('TCP', '127.0.0.1', 11213),
+            IPv4Address('TCP', '127.0.0.1', 11214),
+            IPv4Address('TCP', '127.0.0.1', 11215),
+        ]
+
+        self.reactor = StubReactor()
+        self.pool = SimpleProtocolPool(
+            self.addresses, maxClients=5, reactor=self.reactor)
+
+    def test_removeServerFromRotation(self):
+        with hiro.Timeline().freeze():
+            self.assertEqual(self.pool._unavailableServers, {})
+            self.pool.removeServerFromRotation(self.addresses[1])
+
+            server_key = reprForIPv4Address(self.addresses[1])
+            self.assertEqual(
+                self.pool._unavailableServers,
+                {server_key: time.time() + 10}
+            )
+
+    def test_nextServerAddress_rotates_across_all_servers(self):
+        self.assertEqual(self.pool._next_server_index, -1)
+        self.assertEqual(self.pool._nextServerAddress, self.addresses[0])
+        self.assertEqual(self.pool._nextServerAddress, self.addresses[1])
+        self.assertEqual(self.pool._nextServerAddress, self.addresses[2])
+        self.assertEqual(self.pool._nextServerAddress, self.addresses[3])
+        self.assertEqual(self.pool._nextServerAddress, self.addresses[4])
+        self.assertEqual(self.pool._nextServerAddress, self.addresses[0])
+
+    def test_nextServerAddress_skips_down_servers(self):
+        with hiro.Timeline().freeze() as timeline:
+            # removing a server from rotation should make the pool
+            # skip over it
+            self.pool.removeServerFromRotation(self.addresses[0])
+            self.assertEqual(self.pool._nextServerAddress, self.addresses[1])
+
+            # the server only remains out of rotation for 10 seconds
+            self.pool.removeServerFromRotation(self.addresses[2])
+            timeline.forward(11)
+            self.assertEqual(self.pool._nextServerAddress, self.addresses[2])
+
+    def test_nextServerAddress_returns_next_if_all_are_down(self):
+
+        for address in self.addresses:
+            # removing all servers from rotation
+            self.pool.removeServerFromRotation(address)
+
+        self.assertEqual(len(self.pool._unavailableServers.keys()), 5)
+        self.assertEqual(self.pool._nextServerAddress, self.addresses[0])
