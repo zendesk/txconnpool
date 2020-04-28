@@ -11,4 +11,4 @@ install:
     - pip install -r requirements/test.txt
 script:
     - nosetests --with-cov --cov-report xml .
-    - bash <(curl https://codecov.io/bash)
+    - bash <(curl -S https://raw.githubusercontent.com/zendesk/codecov-bash/master/codecov)
