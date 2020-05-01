@@ -1,20 +1,4 @@
-
-try:
-	# pip >=20
-	from pip._internal.network.session import PipSession
-	from pip._internal.req import parse_requirements
-except ImportError:
-	try:
-		# 10.0.0 <= pip <= 19.3.1
-		from pip._internal.download import PipSession
-		from pip._internal.req import parse_requirements
-	except ImportError:
-		# pip <= 9.0.3
-		from pip.download import PipSession
-		from pip.req import parse_requirements
-
 from setuptools import setup, find_packages
-
 
 version = '0.1.1'
 
@@ -117,15 +101,6 @@ Now, with this having been created, we can go ahead and use it::
 .. _MemCacheProtocol: http://twistedmatrix.com/documents/current/api/twisted.protocols.memcache.MemCacheProtocol.html
 '''
 
-
-def get_requirements(filename, session):
-    return [str(r.req) for r in parse_requirements(filename, session=session)
-            if r.match_markers()]
-
-session = PipSession()
-install_requires = get_requirements('requirements/main.txt', session)
-test_requires = get_requirements('requirements/test.txt', session)
-
 setup(
     name='txconnpool',
     version=version,
@@ -145,6 +120,5 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    install_requires=install_requires,
-    extras_require={'test': test_requires},
+    install_requires=["Twisted>=15"],
 )

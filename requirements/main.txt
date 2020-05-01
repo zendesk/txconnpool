@@ -1,1 +1,1 @@
-Twisted>=15,<16
+Twisted>=15
