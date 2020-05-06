@@ -10,4 +10,5 @@ cache:
 install:
     - pip install -r requirements/test.txt
 script:
-    - nosetests --with-cov .
+    - nosetests --with-cov --cov-report xml .
+    - bash <(curl -S https://raw.githubusercontent.com/zendesk/codecov-bash/master/codecov)
