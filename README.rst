@@ -101,6 +101,6 @@ Python code style
 
 This repository adopts the `black <https://github.com/psf/black>`_ code style and uses `isort <https://github.com/timothycrosley/isort/>`_ to sort all imports. To lint your changes with ``black`` and ``isort``, install `pre-commit <https://pre-commit.com/>`_ and run::
 
-    cd zopim-zendesk-tasks
+    cd txconnpool
     pre-commit install
     pre-commit run --all-files
