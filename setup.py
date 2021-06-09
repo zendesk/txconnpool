@@ -1,6 +1,6 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
-version = '0.1.2'
+version = "0.1.2"
 
 LONG_DESCRIPTION = '''
 txconnpool
@@ -102,21 +102,23 @@ Now, with this having been created, we can go ahead and use it::
 '''
 
 setup(
-    name='txconnpool',
+    name="txconnpool",
     version=version,
     description="A generalized connection pooling library for Twisted",
     long_description=LONG_DESCRIPTION,
     classifiers=[
         "Programming Language :: Python",
+        "Programming Language :: Python :: 2.7",
+        "Programming Language :: Python :: 3.6",
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Framework :: Twisted",
         "Environment :: Web Environment",
     ],
-    keywords='twisted,connection,pool,connpool,txconnpool',
-    author='Eric Florenzano',
-    author_email='floguy@gmail.com',
-    url='http://github.com/ericflo/txconnpool/',
-    license='Apache',
+    keywords="twisted,connection,pool,connpool,txconnpool",
+    author="Eric Florenzano",
+    author_email="floguy@gmail.com",
+    url="http://github.com/ericflo/txconnpool/",
+    license="Apache",
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
