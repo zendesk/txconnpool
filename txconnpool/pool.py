@@ -30,6 +30,7 @@ class NoSuchCommand(Exception):
 def reprForIPv4Address(address):
     return "{}{}:{}".format(address.type, address.host, address.port)
 
+
 class PooledClientFactory(ReconnectingClientFactory):
     """
     A client factory for a protocol that reconnects and notifies a pool of it's
@@ -40,6 +41,7 @@ class PooledClientFactory(ReconnectingClientFactory):
     @ivar _protocolInstance: The current instance of our protocol that we pass
         to our connectionPool.
     """
+
     protocol = None
     connectionPool = None
     _protocolInstance = None
@@ -59,10 +61,7 @@ class PooledClientFactory(ReconnectingClientFactory):
         if self._protocolInstance is not None:
             self.connectionPool.clientBusy(self._protocolInstance)
 
-        ReconnectingClientFactory.clientConnectionLost(
-            self,
-            connector,
-            reason)
+        ReconnectingClientFactory.clientConnectionLost(self, connector, reason)
 
     def clientConnectionFailed(self, connector, reason):
         """
@@ -72,13 +71,9 @@ class PooledClientFactory(ReconnectingClientFactory):
         if self._protocolInstance is not None:
             self.connectionPool.clientBusy(self._protocolInstance)
 
-        self.connectionPool.clientFailed(
-            self._protocolInstance, connector)
+        self.connectionPool.clientFailed(self._protocolInstance, connector)
 
-        ReconnectingClientFactory.clientConnectionFailed(
-            self,
-            connector,
-            reason)
+        ReconnectingClientFactory.clientConnectionFailed(self, connector, reason)
 
     def buildProtocol(self, addr):
         """
@@ -123,8 +118,9 @@ class Pool(object):
 
     clientFactory = None  # Should be set to the subclassed PooledClientFactory
 
-    def __init__(self, serverAddresses, maxClients=5,
-            reactor=None, forceShutdown=False):
+    def __init__(
+        self, serverAddresses, maxClients=5, reactor=None, forceShutdown=False
+    ):
         """
         @param serverAddress: An L{IPv4Address} indicating the server to
             connect to.
@@ -148,7 +144,7 @@ class Pool(object):
 
         self.shutdown_deferred = None
         self.shutdown_requested = False
-        reactor.addSystemEventTrigger('before', 'shutdown', self._shutdownCallback)
+        reactor.addSystemEventTrigger("before", "shutdown", self._shutdownCallback)
 
         self._busyClients = set([])
         self._freeClients = set([])
@@ -158,10 +154,7 @@ class Pool(object):
         self._forceShutdown = forceShutdown
 
     def _isIdle(self):
-        return (
-            len(self._busyClients) == 0 and
-            len(self._commands) == 0
-        )
+        return len(self._busyClients) == 0 and len(self._commands) == 0
 
     def _shutdownCallback(self):
         self.shutdown_requested = True
@@ -187,8 +180,7 @@ class Pool(object):
         candidate = (self._next_server_index + 1) % total_server_count
         for i in range(total_server_count):
             effective_index = (candidate + i) % total_server_count
-            server_key = reprForIPv4Address(
-                self._serverAddresses[effective_index])
+            server_key = reprForIPv4Address(self._serverAddresses[effective_index])
 
             self._next_server_index = effective_index
 
@@ -228,9 +220,9 @@ class Pool(object):
 
         next_server_address = self._nextServerAddress
 
-        self._reactor.connectTCP(next_server_address.host,
-                                 next_server_address.port,
-                                 factory)
+        self._reactor.connectTCP(
+            next_server_address.host, next_server_address.port, factory
+        )
         d = factory.deferred
 
         d.addCallback(_connected)
@@ -252,6 +244,7 @@ class Pool(object):
 
         @return: A L{Deferred} that fires with the result of the given command.
         """
+
         def _freeClientAfterRequest(result):
             self.clientFree(client)
             return result
@@ -285,8 +278,7 @@ class Pool(object):
         if len(self._freeClients) > 0:
             client = self._freeClients.pop()
 
-            d = self._performRequestOnClient(
-                client, method, *args, **kwargs)
+            d = self._performRequestOnClient(client, method, *args, **kwargs)
 
         elif len(self._busyClients) + self._pendingConnects >= self._maxClients:
             d = Deferred()
@@ -294,8 +286,7 @@ class Pool(object):
 
         else:
             d = self._newClientConnection()
-            d.addCallback(self._performRequestOnClient, method,
-                *args, **kwargs)
+            d.addCallback(self._performRequestOnClient, method, *args, **kwargs)
 
         return d
 

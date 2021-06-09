@@ -13,13 +13,12 @@
 # limitations under the License.
 ##
 
-from twisted.trial.unittest import TestCase
 from twisted.internet import reactor
 from twisted.internet.defer import Deferred
-
-from txconnpool.test.test_basic import ADDRESS, StubReactor, StubConnectionPool
+from twisted.trial.unittest import TestCase
 
 from txconnpool import memcache
+from txconnpool.test.test_basic import ADDRESS, StubConnectionPool, StubReactor
 
 
 class CallRecorder(object):
@@ -29,6 +28,7 @@ class CallRecorder(object):
     @ivar calls: List of tuples of args and kwargs.
     @type calls: C{[(tuple, dict)]}
     """
+
     def __init__(self):
         self.calls = []
 
@@ -42,45 +42,46 @@ class CallRecorder(object):
 class MemCachePoolTestCase(TestCase):
     def setUp(self):
         self.reactor = StubReactor()
-        self.pool = memcache.MemCachePool(
-          ADDRESS, maxClients=5, reactor=self.reactor)
+        self.pool = memcache.MemCachePool(ADDRESS, maxClients=5, reactor=self.reactor)
 
         self.call_recorder = CallRecorder()
-        self.patch(memcache.Pool,
-                   'performRequest',
-                   self.call_recorder.call)
+        self.patch(memcache.Pool, "performRequest", self.call_recorder.call)
 
     def test_get(self):
         """
         L{MemCachePool.get} properly calls L{Pool.performRequest}
         """
-        self.pool.get('foo', 'bar', somekwarg=1)
-        self.assertEqual(self.call_recorder.calls,
-                         [(('get', 'foo', 'bar'), {'somekwarg': 1})])
+        self.pool.get("foo", "bar", somekwarg=1)
+        self.assertEqual(
+            self.call_recorder.calls, [(("get", "foo", "bar"), {"somekwarg": 1})]
+        )
 
     def test_set(self):
         """
         L{MemCachePool.set} properly calls L{Pool.performRequest}
         """
-        self.pool.set('foo', 'bar', ttl=10000)
-        self.assertEqual(self.call_recorder.calls,
-                         [(('set', 'foo', 'bar'), {'ttl': 10000})])
+        self.pool.set("foo", "bar", ttl=10000)
+        self.assertEqual(
+            self.call_recorder.calls, [(("set", "foo", "bar"), {"ttl": 10000})]
+        )
 
     def test_delete(self):
         """
         L{MemCachePool.delete} properly calls L{Pool.performRequest}
         """
-        self.pool.delete('foo', somekwarg=1)
-        self.assertEqual(self.call_recorder.calls,
-                         [(('delete', 'foo'), {'somekwarg': 1})])
+        self.pool.delete("foo", somekwarg=1)
+        self.assertEqual(
+            self.call_recorder.calls, [(("delete", "foo"), {"somekwarg": 1})]
+        )
 
     def test_add(self):
         """
         L{MemCachePool.add} properly calls L{Pool.performRequest}
         """
-        self.pool.add('foo', 'bar', ttl=10000)
-        self.assertEqual(self.call_recorder.calls,
-                         [(('add', 'foo', 'bar'), {'ttl': 10000})])
+        self.pool.add("foo", "bar", ttl=10000)
+        self.assertEqual(
+            self.call_recorder.calls, [(("add", "foo", "bar"), {"ttl": 10000})]
+        )
 
 
 class PooledMemCacheProtocolTestCase(TestCase):
@@ -101,7 +102,7 @@ class PooledMemCacheProtocolTestCase(TestCase):
         calls L{MemCacheProtocol.connectionMade}
         """
         cm_cr = CallRecorder()
-        self.patch(memcache.MemCacheProtocol, 'connectionMade', cm_cr.call)
+        self.patch(memcache.MemCacheProtocol, "connectionMade", cm_cr.call)
 
         self.protocol.connectionMade()
 
@@ -113,7 +114,7 @@ class PooledMemCacheProtocolTestCase(TestCase):
         the current protocol instance to the pool and marks it as free.
         """
         self.protocol.connectionMade()
-        self.assertEqual(self.pool.calls, [('free', self.protocol)])
+        self.assertEqual(self.pool.calls, [("free", self.protocol)])
 
     def test_connectionMadeFiresFactoryDeferred(self):
         """

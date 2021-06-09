@@ -95,3 +95,12 @@ Now, with this having been created, we can go ahead and use it::
 .. _memcached: http://memcached.org/
 .. _ClientCreator: http://twistedmatrix.com/documents/current/api/twisted.internet.protocol.ClientCreator.html
 .. _MemCacheProtocol: http://twistedmatrix.com/documents/current/api/twisted.protocols.memcache.MemCacheProtocol.html
+
+Python code style
+-----------------
+
+This repository adopts the `black <https://github.com/psf/black>`_ code style and uses `isort <https://github.com/timothycrosley/isort/>`_ to sort all imports. To lint your changes with ``black`` and ``isort``, install `pre-commit <https://pre-commit.com/>`_ and run::
+
+    cd zopim-zendesk-tasks
+    pre-commit install
+    pre-commit run --all-files
