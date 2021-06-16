@@ -1,0 +1,42 @@
+name: repo-checks
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  static-analysis:
+    runs-on: [ self-hosted, zendesk-stable ]
+    steps:
+      - uses: zendesk/checkout@v2
+        with:
+          token: ${{ secrets.ORG_GITHUB_TOKEN }}
+          submodules: recursive
+      - name: Set up Python
+        uses: zendesk/setup-python@v2
+        with:
+          python-version: 3.6
+      - name: Lint with pre-commit
+        run: |
+          pip install pre-commit
+          pre-commit run --all-files --show-diff-on-failure
+
+  nosetests:
+    runs-on: [ self-hosted, zendesk-stable ]
+    strategy:
+      matrix:
+        python-version:
+          - pypy2
+          - pypy3
+          - 2.7
+          - 3.6
+    steps:
+    - uses: zendesk/checkout@v2
+    - uses: zendesk/setup-python@v2
+      with:
+        python-version: ${{ matrix.python-version }}
+    - name: run ${{ matrix.python-version }}
+      run: |
+        pip install -r requirements/test.txt
+        nosetests --with-cov --cov-report xml .
+        mv ${{ github.workspace }}/coverage.xml ${{ github.workspace }}/python${{ matrix.python-version }}.coverage.xml
