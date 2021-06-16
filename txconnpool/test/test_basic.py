@@ -23,7 +23,7 @@ from twisted.internet import protocol
 from twisted.internet.address import IPv4Address
 from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IConnector, IReactorTCP
-from zope.interface import implements
+from zope.interface import implementer
 
 from txconnpool.pool import PooledClientFactory, Pool, reprForIPv4Address
 
@@ -106,11 +106,11 @@ class StubConnectionPool(object):
         self.calls.append(('failed', client))
 
 
+@implementer(IConnector)
 class StubConnector(mock.Mock):
     """
     A stub L{IConnector} that can be used for testing.
     """
-    implements(IConnector)
 
     def connect(self):
         """
@@ -123,13 +123,13 @@ class StubConnector(mock.Mock):
         """
 
 
+@implementer(IReactorTCP)
 class StubReactor(object):
     """
     A stub L{IReactorTCP} that records the calls to connectTCP.
 
     @ivar calls: A C{list} of tuples (args, kwargs) sent to connectTCP.
     """
-    implements(IReactorTCP)
 
     def __init__(self):
         self.calls = []
