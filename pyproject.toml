@@ -1,0 +1,22 @@
+[tool.black]
+target-version = ['py27', 'py36']  # Remove py27 when Python 2 support is dropped
+exclude = '''
+  /(
+      \.eggs
+    | \.git
+    | \.mypy_cache
+    | \.tox
+    | \.venv
+    | _build
+    | build
+    | dist
+    | vendor
+  )/
+'''
+
+[tool.isort]
+profile = "black"
+
+[flake8]
+max_line_length = 100
+select = ['W293', 'E502', 'E704', 'E703', 'E702', 'E701', 'E401', 'E304', 'E274', 'E273', 'E272', 'E271', 'E251', 'E242', 'E241', 'E228', 'E227', 'E226', 'E225', 'E224', 'E223', 'E222', 'E221', 'E211', 'E202', 'E201', 'E101']

@@ -25,10 +25,9 @@ from twisted.internet.defer import Deferred
 from twisted.internet.interfaces import IConnector, IReactorTCP
 from zope.interface import implementer
 
-from txconnpool.pool import PooledClientFactory, Pool, reprForIPv4Address
+from txconnpool.pool import Pool, PooledClientFactory, reprForIPv4Address
 
-
-ADDRESS = IPv4Address('TCP', '127.0.0.1', 11211)
+ADDRESS = IPv4Address("TCP", "127.0.0.1", 11211)
 
 
 class PooledSimpleProtocol(protocol.Protocol):
@@ -45,16 +44,16 @@ class PooledSimpleProtocol(protocol.Protocol):
             self.factory.deferred = None
 
     def set(self, key, value):
-        if not hasattr(self, '_dct'):
+        if not hasattr(self, "_dct"):
             self._dct = {}
         self._dct[key] = value
         d = Deferred()
-        d.callback('ok')
+        d.callback("ok")
         return d
 
     def get(self, key):
         d = Deferred()
-        d.callback(getattr(self, '_dct', {}).get(key))
+        d.callback(getattr(self, "_dct", {}).get(key))
         return d
 
 
@@ -85,25 +84,25 @@ class StubConnectionPool(object):
         """
         Record a C{'free'} call for C{client}.
         """
-        self.calls.append(('free', client))
+        self.calls.append(("free", client))
 
     def clientBusy(self, client):
         """
         Record a C{'busy'} call for C{client}.
         """
-        self.calls.append(('busy', client))
+        self.calls.append(("busy", client))
 
     def clientGone(self, client):
         """
         Record a C{'gone'} call for C{client}
         """
-        self.calls.append(('gone', client))
+        self.calls.append(("gone", client))
 
     def clientFailed(self, client, connector):
         """
         Record a C{'failed'} call for C{client}
         """
-        self.calls.append(('failed', client))
+        self.calls.append(("failed", client))
 
 
 @implementer(IConnector)
@@ -191,8 +190,10 @@ class SimpleProtocolClientFactoryTests(unittest.TestCase):
         notifies the it's connectionPool that it is busy.
         """
         self.factory.clientConnectionFailed(StubConnector(), None)
-        self.assertEquals(self.factory.connectionPool.calls,
-                          [('busy', self.protocol), ('failed', self.protocol)])
+        self.assertEquals(
+            self.factory.connectionPool.calls,
+            [("busy", self.protocol), ("failed", self.protocol)],
+        )
 
     def test_clientConnectionLostNotifiesPool(self):
         """
@@ -200,8 +201,7 @@ class SimpleProtocolClientFactoryTests(unittest.TestCase):
         the it's connectionPool that it is busy.
         """
         self.factory.clientConnectionLost(StubConnector(), None)
-        self.assertEquals(self.factory.connectionPool.calls,
-                          [('busy', self.protocol)])
+        self.assertEquals(self.factory.connectionPool.calls, [("busy", self.protocol)])
 
     def test_buildProtocolRemovesExistingClient(self):
         """
@@ -212,8 +212,7 @@ class SimpleProtocolClientFactoryTests(unittest.TestCase):
         and add a new one.
         """
         self.factory.buildProtocol(None)
-        self.assertEquals(self.factory.connectionPool.calls,
-                          [('gone', self.protocol)])
+        self.assertEquals(self.factory.connectionPool.calls, [("gone", self.protocol)])
 
     def tearDown(self):
         """
@@ -237,8 +236,7 @@ class SimpleProtocolPoolTests(unittest.TestCase):
         """
         unittest.TestCase.setUp(self)
         self.reactor = StubReactor()
-        self.pool = SimpleProtocolPool(
-            ADDRESS, maxClients=5, reactor=self.reactor)
+        self.pool = SimpleProtocolPool(ADDRESS, maxClients=5, reactor=self.reactor)
 
     def test_clientFreeAddsNewClient(self):
         """
@@ -313,13 +311,14 @@ class SimpleProtocolPoolTests(unittest.TestCase):
         Test that L{SimpleProtocolPool.performRequest} on a fresh instance
         causes a new connection to be created.
         """
+
         def _checkResult(result):
-            self.assertEquals(result, 'bar')
+            self.assertEquals(result, "bar")
 
         p = PooledSimpleProtocol()
-        p.set('foo', 'bar')
+        p.set("foo", "bar")
 
-        d = self.pool.performRequest('get', 'foo')
+        d = self.pool.performRequest("get", "foo")
         d.addCallback(_checkResult)
 
         args, kwargs = self.reactor.calls.pop()
@@ -337,16 +336,17 @@ class SimpleProtocolPoolTests(unittest.TestCase):
         Test that L{SimpleProtocolPool.performRequest} doesn't create a new
         connection to be created if there is a free connection.
         """
+
         def _checkResult(result):
-            self.assertEquals(result, 'bar')
+            self.assertEquals(result, "bar")
             self.assertEquals(self.reactor.calls, [])
 
         p = PooledSimpleProtocol()
-        p.set('foo', 'bar')
+        p.set("foo", "bar")
 
         self.pool.clientFree(p)
 
-        d = self.pool.performRequest('get', 'foo')
+        d = self.pool.performRequest("get", "foo")
         d.addCallback(_checkResult)
 
         return d
@@ -356,22 +356,23 @@ class SimpleProtocolPoolTests(unittest.TestCase):
         Test that L{SimpleProtocolPool.performRequest} queues the request if
         all clients are busy.
         """
+
         def _checkResult(result):
-            self.assertEquals(result, 'bar')
+            self.assertEquals(result, "bar")
             self.assertEquals(self.reactor.calls, [])
 
         p = PooledSimpleProtocol()
-        p.set('foo', 'bar')
+        p.set("foo", "bar")
 
         p1 = PooledSimpleProtocol()
-        p1.set('foo', 'baz')
+        p1.set("foo", "baz")
 
         self.pool.suggestMaxClients(2)
 
         self.pool.clientBusy(p)
         self.pool.clientBusy(p1)
 
-        d = self.pool.performRequest('get', 'foo')
+        d = self.pool.performRequest("get", "foo")
         d.addCallback(_checkResult)
 
         self.pool.clientFree(p)
@@ -383,20 +384,21 @@ class SimpleProtocolPoolTests(unittest.TestCase):
         Test that L{PooledSimpleProtocol.performRequest} will create new
         connections until it reaches the maximum number of busy clients.
         """
+
         def _checkResult(result):
-            self.assertEquals(result, 'baz')
+            self.assertEquals(result, "baz")
 
         self.pool.suggestMaxClients(2)
 
         p = PooledSimpleProtocol()
-        p.set('foo', 'bar')
+        p.set("foo", "bar")
 
         p1 = PooledSimpleProtocol()
-        p1.set('foo', 'baz')
+        p1.set("foo", "baz")
 
         self.pool.clientBusy(p)
 
-        d = self.pool.performRequest('get', 'foo')
+        d = self.pool.performRequest("get", "foo")
 
         args, kwargs = self.reactor.calls.pop()
 
@@ -416,7 +418,7 @@ class SimpleProtocolPoolTests(unittest.TestCase):
         """
         self.pool.suggestMaxClients(1)
 
-        d = self.pool.performRequest('get', 'foo')
+        d = self.pool.performRequest("get", "foo")
 
         args, kwargs = self.reactor.calls.pop()
 
@@ -424,12 +426,13 @@ class SimpleProtocolPoolTests(unittest.TestCase):
         self.failUnless(isinstance(args[2], SimpleProtocolClientFactory))
         self.assertEquals(kwargs, {})
 
-        self.pool.performRequest('get', 'bar')
+        self.pool.performRequest("get", "bar")
         self.assertEquals(self.reactor.calls, [])
 
         args[2].deferred.callback(PooledSimpleProtocol())
 
         return d
+
 
 class SimpleProtocolPooledServersTests(unittest.TestCase):
     """
@@ -445,16 +448,17 @@ class SimpleProtocolPooledServersTests(unittest.TestCase):
         """
         unittest.TestCase.setUp(self)
         self.addresses = [
-            IPv4Address('TCP', '127.0.0.1', 11211),
-            IPv4Address('TCP', '127.0.0.1', 11212),
-            IPv4Address('TCP', '127.0.0.1', 11213),
-            IPv4Address('TCP', '127.0.0.1', 11214),
-            IPv4Address('TCP', '127.0.0.1', 11215),
+            IPv4Address("TCP", "127.0.0.1", 11211),
+            IPv4Address("TCP", "127.0.0.1", 11212),
+            IPv4Address("TCP", "127.0.0.1", 11213),
+            IPv4Address("TCP", "127.0.0.1", 11214),
+            IPv4Address("TCP", "127.0.0.1", 11215),
         ]
 
         self.reactor = StubReactor()
         self.pool = SimpleProtocolPool(
-            self.addresses, maxClients=5, reactor=self.reactor)
+            self.addresses, maxClients=5, reactor=self.reactor
+        )
 
     def test_removeServerFromRotation(self):
         with hiro.Timeline().freeze():
@@ -463,8 +467,7 @@ class SimpleProtocolPooledServersTests(unittest.TestCase):
 
             server_key = reprForIPv4Address(self.addresses[1])
             self.assertEqual(
-                self.pool._unavailableServers,
-                {server_key: time.time() + 10}
+                self.pool._unavailableServers, {server_key: time.time() + 10}
             )
 
     def test_nextServerAddress_rotates_across_all_servers(self):

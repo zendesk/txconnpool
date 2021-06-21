@@ -1,6 +1,15 @@
 .. image:: https://codecov.io/gh/zendesk/txconnpool/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/zendesk/txconnpool
 
+.. image:: https://img.shields.io/badge/code%20style-black-000000.svg
+   :target: https://github.com/psf/black
+
+.. image:: https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white
+   :target: https://github.com/pre-commit/pre-commit
+
+.. image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
+   :target: https://pycqa.github.io/isort/
+
 txconnpool
 ==========
 
@@ -29,7 +38,9 @@ Example Implementation
 ----------------------
 
 First we need to create a few classes of boilerplate, to transform a
-MemCacheProtocol_ into a PooledMemcachedProtocol, and then create a pool::
+MemCacheProtocol_ into a PooledMemcachedProtocol, and then create a pool
+
+.. code-block:: python
 
     from twisted.protocols.memcache import MemCacheProtocol
 
@@ -61,23 +72,25 @@ MemCacheProtocol_ into a PooledMemcachedProtocol, and then create a pool::
         clientFactory = MemCacheClientFactory
     
         def get(self, *args, **kwargs):
-            return self.performRequest('get', *args, **kwargs)
+            return self.performRequest("get", *args, **kwargs)
 
         def set(self, *args, **kwargs):
-            return self.performRequest('set', *args, **kwargs)
+            return self.performRequest("set", *args, **kwargs)
 
         def delete(self, *args, **kwargs):
-            return self.performRequest('delete', *args, **kwargs)
+            return self.performRequest("delete", *args, **kwargs)
 
         def add(self, *args, **kwargs):
-            return self.performRequest('add', *args, **kwargs)
+            return self.performRequest("add", *args, **kwargs)
 
 
-Now, with this having been created, we can go ahead and use it::
+Now, with this having been created, we can go ahead and use it
+
+.. code-block:: python
 
     from twisted.internet.address import IPv4Address
     
-    addr = IPv4Address('TCP', '127.0.0.1', 11211)
+    addr = IPv4Address("TCP", "127.0.0.1", 11211)
     mc_pool = MemCachePool(addr, maxClients=20)
     
     d = mc_pool.get('cached-data')
@@ -85,9 +98,9 @@ Now, with this having been created, we can go ahead and use it::
     def gotCachedData(data):
         flags, value = data
         if value:
-            print 'Yay, we got a cache hit'
+            print("Yay, we got a cache hit")
         else:
-            print 'Boo, it was a cache miss'
+            print("Boo, it was a cache miss")
     
     d.addCallback(gotCachedData)
 
@@ -95,3 +108,15 @@ Now, with this having been created, we can go ahead and use it::
 .. _memcached: http://memcached.org/
 .. _ClientCreator: http://twistedmatrix.com/documents/current/api/twisted.internet.protocol.ClientCreator.html
 .. _MemCacheProtocol: http://twistedmatrix.com/documents/current/api/twisted.protocols.memcache.MemCacheProtocol.html
+
+Python code style
+-----------------
+
+This repository adopts the `black <https://github.com/psf/black>`_ code style and uses `isort <https://github.com/timothycrosley/isort/>`_ to sort all imports. To lint your changes with ``black`` and ``isort``, install `pre-commit <https://pre-commit.com/>`_ and run
+
+.. code-block:: bash
+
+    cd txconnpool
+    pip install pre-commit
+    pre-commit install
+    pre-commit run --all-files

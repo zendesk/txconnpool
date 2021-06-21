@@ -16,7 +16,7 @@
 
 from twisted.protocols.memcache import MemCacheProtocol
 
-from txconnpool.pool import PooledClientFactory, Pool
+from txconnpool.pool import Pool, PooledClientFactory
 
 
 class _PooledMemCacheProtocol(MemCacheProtocol):
@@ -24,6 +24,7 @@ class _PooledMemCacheProtocol(MemCacheProtocol):
     A MemCacheProtocol that will notify a connectionPool that it is ready
     to accept requests.
     """
+
     factory = None
 
     def connectionMade(self):
@@ -43,6 +44,7 @@ class _MemCacheClientFactory(PooledClientFactory):
     """
     L{PooledClientFactory} that uses L{_PooledMemCacheProtocol}
     """
+
     protocol = _PooledMemCacheProtocol
 
 
@@ -68,28 +70,29 @@ class MemCachePool(Pool):
 
         d.addCallback(gotCachedData)
     """
+
     clientFactory = _MemCacheClientFactory
 
     def get(self, *args, **kwargs):
         """
         See L{twisted.protocols.memcache.MemCacheProtocol.get}.
         """
-        return self.performRequest('get', *args, **kwargs)
+        return self.performRequest("get", *args, **kwargs)
 
     def set(self, *args, **kwargs):
         """
         See L{twisted.protocols.memcache.MemCacheProtocol.set}
         """
-        return self.performRequest('set', *args, **kwargs)
+        return self.performRequest("set", *args, **kwargs)
 
     def delete(self, *args, **kwargs):
         """
         See L{twisted.protocols.memcache.MemCacheProtocol.delete}
         """
-        return self.performRequest('delete', *args, **kwargs)
+        return self.performRequest("delete", *args, **kwargs)
 
     def add(self, *args, **kwargs):
         """
         See L{twisted.protocols.memcache.MemCacheProtocol.add}
         """
-        return self.performRequest('add', *args, **kwargs)
+        return self.performRequest("add", *args, **kwargs)
