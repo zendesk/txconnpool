@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: zendesk/checkout@v2
+      - uses: zendesk/setup-python@v2
+        with:
+          python-version: 3.6
+      - name: Lint with pre-commit
+        run: |
+          pip install pre-commit
+          pre-commit run --all-files --show-diff-on-failure
+
+  main:
+    name: python-test-matrix
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          - "2.7"
+          - "3.6"
+          - "pypy2"
+          - "pypy3"
+    steps:
+    - uses: zendesk/checkout@v2
+    - uses: zendesk/setup-python@v2
+      with:
+        python-version: ${{ matrix.version }}
+    - name: test python ${{ matrix.version }}
+      run: |
+        pip install -r requirements/test.txt
+        nosetests --with-cov --cov-report xml
+        bash <(curl -S https://raw.githubusercontent.com/zendesk/codecov-bash/master/codecov)
