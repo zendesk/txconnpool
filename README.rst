@@ -1,6 +1,9 @@
 .. image:: https://codecov.io/gh/zendesk/txconnpool/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/zendesk/txconnpool
 
+.. image:: https://github.com/zendesk/txconnpool/actions/workflows/ci.yaml/badge.svg
+   :target: https://github.com/zendesk/txconnpool/actions/workflows/ci.yaml
+
 .. image:: https://img.shields.io/badge/code%20style-black-000000.svg
    :target: https://github.com/psf/black
 
@@ -9,6 +12,7 @@
 
 .. image:: https://img.shields.io/badge/%20imports-isort-%231674b1?style=flat&labelColor=ef8336
    :target: https://pycqa.github.io/isort/
+
 
 txconnpool
 ==========
