@@ -120,3 +120,5 @@ This repository adopts the `black <https://github.com/psf/black>`_ code style an
     pip install pre-commit
     pre-commit install
     pre-commit run --all-files
+
+[Click here](https://zendesk.atlassian.net/wiki/x/6rAAQQ) for more pre-commit installation details
